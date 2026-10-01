@@ -1,0 +1,9 @@
+line-length = 100
+target-version = "py312"
+extend-exclude = ["venv", ".venv", "frontend", "**/migrations/*.py"]
+
+[lint]
+select = ["E", "F", "I", "B"]   # erros, pyflakes, ordem de imports, bugs comuns
+
+[lint.per-file-ignores]
+"config/settings/*.py" = ["F403", "F405"]   # permite "from .base import *"

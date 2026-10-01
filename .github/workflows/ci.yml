@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true   # cancela execuções antigas da mesma branch
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: agendamentos
+        ports: ["3306:3306"]
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -proot"
+          --health-interval=5s
+          --health-timeout=5s
+          --health-retries=20
+
+    env:
+      SECRET_KEY: ci-secret-key-nao-usar-em-producao
+      DEBUG: "False"
+      ALLOWED_HOSTS: localhost
+      DB_NAME: agendamentos
+      DB_USER: root          # root pode criar o banco test_agendamentos sem GRANT extra
+      DB_PASSWORD: root
+      DB_HOST: 127.0.0.1
+      DB_PORT: "3306"
+      CORS_ALLOWED_ORIGINS: http://localhost:5173
+      CSRF_TRUSTED_ORIGINS: http://localhost:5173
+      FRONTEND_URL: http://localhost:5173
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements/*.txt
+
+      - name: Dependências do sistema (mysqlclient)
+        run: sudo apt-get update && sudo apt-get install -y pkg-config default-libmysqlclient-dev build-essential
+
+      - name: Instalar dependências Python
+        run: pip install -r requirements/dev.txt
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Verificar migrations pendentes
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Testes (pytest)
+        run: pytest --create-db --cov=apps --cov-report=term-missing
+
+  frontend:
+    name: Frontend (eslint + build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+        env:
+          VITE_API_URL: http://localhost:8000/api
