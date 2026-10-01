@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "drf_spectacular",
     "apps.accounts",
+    "apps.tenants",
     "apps.core",
 ]
 
