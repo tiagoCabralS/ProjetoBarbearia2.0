@@ -17,7 +17,7 @@ def test_protected_endpoint_requires_auth(api_client):
     # qualquer rota protegida; aqui o schema já prova o padrão IsAuthenticated
     # após existir o primeiro endpoint de negócio, troque por ele
     r = api_client.get("/api/auth/refresh/")
-    assert r.status_code in (400, 405)   # rota pública do JWT, não retorna 401
+    assert r.status_code in (400, 405)  # rota pública do JWT, não retorna 401
 
 
 @pytest.mark.django_db
